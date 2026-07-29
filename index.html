@@ -193,30 +193,28 @@
 
   /* ---------- aufstellung ---------- */
   .pitch{
-    background:var(--pitch); border-radius:6px; padding:22px 12px;
-    position:relative; overflow:hidden;
+    background:var(--pitch); border-radius:6px; padding:0; position:relative; overflow:hidden;
+    aspect-ratio:68/98;
   }
-  .pitch::before{
-    content:''; position:absolute; inset:10px; border:1.5px solid var(--pitch-line); border-radius:3px;
-  }
-  .pitch::after{
-    content:''; position:absolute; left:50%; top:10px; bottom:10px; width:1.5px;
-    background:var(--pitch-line); transform:translateX(-50%);
-  }
-  .pitch-rows{ position:relative; z-index:1; display:flex; flex-direction:column; gap:20px; }
-  .pitch-row{ display:flex; justify-content:center; gap:16px; flex-wrap:wrap; }
+  .pitch svg{ position:absolute; inset:0; width:100%; height:100%; }
+  .pitch-rows{ position:absolute; inset:0; z-index:1; }
   .badge{
-    display:flex; flex-direction:column; align-items:center; gap:5px; width:56px;
+    position:absolute; transform:translate(-50%,-50%);
+    display:flex; flex-direction:column; align-items:center; gap:4px; width:52px;
   }
   .badge .num{
-    width:32px; height:32px; border-radius:50%; background:var(--paper); color:var(--ink);
+    width:30px; height:30px; border-radius:50%; background:var(--paper); color:var(--ink);
     display:flex; align-items:center; justify-content:center;
-    font-family:var(--font-mono); font-weight:700; font-size:13px;
+    font-family:var(--font-mono); font-weight:700; font-size:12px;
     border:2px solid var(--paper);
   }
   .badge .nm{
-    font-family:var(--font-mono); font-size:9.5px; color:var(--paper); text-align:center;
-    line-height:1.15; letter-spacing:.01em;
+    font-family:var(--font-mono); font-size:9px; color:var(--paper); text-align:center;
+    line-height:1.15; letter-spacing:.01em; text-shadow:0 1px 2px rgba(0,0,0,.6);
+  }
+  .badge .ps{
+    font-family:var(--font-mono); font-size:7.5px; color:rgba(250,249,246,.55);
+    letter-spacing:.06em; text-transform:uppercase;
   }
   .lineup-meta{
     display:flex; justify-content:space-between; align-items:center;
@@ -396,6 +394,7 @@ const SQUAD = [
   {nr:24, name:"Benjamin Tahiri"},
   {nr:27, name:"Heiko Rieger"},
   {nr:28, name:"Florian Pösinger"},
+  {nr:39, name:"Markus Meier"},
 ];
 
 // Spielplan Saison 2026/27 (H = Heim in der Hagelschutz.com Arena, A = Auswärts)
@@ -607,6 +606,52 @@ function parseCSV(text){
   });
 }
 
+// Erkennt aus einem frei eingegebenen Positionstext die Zeile aufs Feld (0=Tor .. 5=Sturm),
+// eine Links/Mitte/Rechts-Tendenz fuer die Sortierung, und eine kurze Abkuerzung fuers Badge.
+function classifyPosition(raw){
+  const k = foldKey(raw);
+  let band = 3, abbr = "";
+  if(k.includes("tor")) { band = 0; abbr = "TW"; }
+  else if(k.includes("libero")) { band = 1; abbr = "LI"; }
+  else if(k.includes("verteidig") || k.includes("abwehr")){
+    band = 1;
+    abbr = k.includes("links") ? "LV" : k.includes("recht") ? "RV" : k.includes("innen") ? "IV" : "AB";
+  }
+  else if(k.includes("defensiv") && k.includes("mittelfeld")){ band = 2; abbr = "DM"; }
+  else if(k.includes("sechs")){ band = 2; abbr = "DM"; }
+  else if(k.includes("offensiv") && k.includes("mittelfeld")){ band = 4; abbr = "OM"; }
+  else if(k.includes("zehner") || k.includes("haengende spitze")){ band = 4; abbr = "OM"; }
+  else if(k.includes("mittelfeld")){
+    band = 3;
+    abbr = k.includes("links") ? "LM" : k.includes("recht") ? "RM" : "ZM";
+  }
+  else if(k.includes("aussen") || k.includes("fluegel")){
+    band = 3;
+    abbr = k.includes("links") ? "LA" : k.includes("recht") ? "RA" : "FL";
+  }
+  else if(k.includes("sturm") || k.includes("stuermer") || k.includes("angriff") || k.includes("spitze")){
+    band = 5; abbr = "ST";
+  }
+  else if(k){ abbr = k.slice(0,2).toUpperCase(); }
+
+  const lr = k.includes("links") ? 0 : k.includes("recht") ? 2 : 1;
+  return {band, abbr, lr};
+}
+
+function pitchMarkingsSVG(){
+  return '<svg viewBox="0 0 68 98" preserveAspectRatio="none">' +
+    '<rect x="1" y="1" width="66" height="96" fill="none" stroke="var(--pitch-line)" stroke-width="0.6"/>' +
+    '<line x1="1" y1="49" x2="67" y2="49" stroke="var(--pitch-line)" stroke-width="0.6"/>' +
+    '<circle cx="34" cy="49" r="9" fill="none" stroke="var(--pitch-line)" stroke-width="0.6"/>' +
+    '<rect x="14" y="1" width="40" height="15" fill="none" stroke="var(--pitch-line)" stroke-width="0.6"/>' +
+    '<rect x="26" y="1" width="16" height="5.5" fill="none" stroke="var(--pitch-line)" stroke-width="0.6"/>' +
+    '<rect x="14" y="82" width="40" height="15" fill="none" stroke="var(--pitch-line)" stroke-width="0.6"/>' +
+    '<rect x="26" y="91.5" width="16" height="5.5" fill="none" stroke="var(--pitch-line)" stroke-width="0.6"/>' +
+    '<rect x="29" y="-1.5" width="10" height="1.5" fill="var(--pitch-line)"/>' +
+    '<rect x="29" y="98" width="10" height="1.5" fill="var(--pitch-line)"/>' +
+  '</svg>';
+}
+
 function renderEmptyLineup(){
   const c = document.getElementById("lineup-container");
   c.innerHTML =
@@ -618,12 +663,6 @@ function renderEmptyLineup(){
 
 function renderLineup(rows){
   const bySquadNr = Object.fromEntries(SQUAD.map(p=>[String(p.nr),p.name]));
-  const LINES = [
-    {label:"Tor", match:["tor"]},
-    {label:"Abwehr", match:["abwehr","verteidigung"]},
-    {label:"Mittelfeld", match:["mittelfeld"]},
-    {label:"Sturm", match:["sturm","angriff"]},
-  ];
   const starters = rows.filter(r => (r.status||"").toLowerCase().startsWith("start"));
   const bench = rows.filter(r => (r.status||"").toLowerCase().startsWith("bank"));
 
@@ -634,16 +673,34 @@ function renderLineup(rows){
   const cotrainer = (rows.find(r=>r.cotrainer && r.cotrainer.trim())||{}).cotrainer || "";
   const trainerLine = [trainer && ("Trainer: "+trainer), cotrainer && ("Co-Trainer: "+cotrainer)].filter(Boolean).join(" · ");
 
-  const rowsHTML = LINES.map(line=>{
-    const players = starters.filter(r => line.match.includes(foldKey(r.linie)));
-    if(players.length === 0) return "";
-    const badges = players.map(p=>{
+  // Jeden Spieler einer Zeile (Tor..Sturm) und einer Links/Mitte/Rechts-Tendenz zuordnen
+  const placed = starters.map(p => ({...p, ...classifyPosition(p.linie)}));
+
+  // Nur Zeilen verwenden, die tatsaechlich besetzt sind -> Formation wird sichtbar,
+  // nicht immer starr 4-4-2
+  const bandsPresent = [...new Set(placed.map(p=>p.band))].sort((a,b)=>a-b);
+  const topY = 12, bottomY = 84;
+  const yFor = band => {
+    const i = bandsPresent.indexOf(band);
+    return bandsPresent.length <= 1 ? topY : topY + i*(bottomY-topY)/(bandsPresent.length-1);
+  };
+
+  let badgesHTML = "";
+  bandsPresent.forEach(band=>{
+    const row = placed.filter(p=>p.band===band).sort((a,b)=>a.lr-b.lr || a.rueckennummer-b.rueckennummer);
+    const n = row.length;
+    row.forEach((p,i)=>{
+      const x = n===1 ? 50 : 15 + i*(70/(n-1));
+      const y = yFor(band);
       const name = bySquadNr[p.rueckennummer] || ("#"+p.rueckennummer);
       const shortName = name.split(" ").pop();
-      return '<div class="badge"><div class="num">'+p.rueckennummer+'</div><div class="nm">'+shortName+'</div></div>';
-    }).join("");
-    return '<div class="pitch-row">'+badges+'</div>';
-  }).join("");
+      badgesHTML += '<div class="badge" style="left:'+x+'%;top:'+y+'%">' +
+        '<div class="num">'+p.rueckennummer+'</div>' +
+        '<div class="nm">'+shortName+'</div>' +
+        (p.abbr ? '<div class="ps">'+p.abbr+'</div>' : '') +
+      '</div>';
+    });
+  });
 
   const benchHTML = bench.map(p=>{
     const name = bySquadNr[p.rueckennummer] || ("#"+p.rueckennummer);
@@ -652,7 +709,7 @@ function renderLineup(rows){
 
   const c = document.getElementById("lineup-container");
   c.innerHTML =
-    '<div class="pitch"><div class="pitch-rows">'+rowsHTML+'</div></div>' +
+    '<div class="pitch">'+pitchMarkingsSVG()+'<div class="pitch-rows">'+badgesHTML+'</div></div>' +
     '<div class="lineup-meta"><span>'+(formation?("Formation "+formation):"")+'</span><span>'+trainerLine+'</span></div>' +
     (bench.length ? '<div class="bench-title">Ersatzbank</div><div class="bench-list">'+benchHTML+'</div>' : "");
 }
