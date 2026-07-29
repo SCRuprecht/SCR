@@ -175,6 +175,11 @@
   .match-opp{
     flex:1; font-family:var(--font-body); font-weight:600; font-size:14.5px;
   }
+  .match-comp{
+    display:block; font-family:var(--font-mono); font-weight:400; font-size:10.5px;
+    color:var(--mid); text-transform:uppercase; letter-spacing:.04em; margin-top:1px;
+  }
+  .match-row.next .match-comp{ color:rgba(250,249,246,.6); }
   .match-row.past .match-opp{ text-decoration:line-through; }
   .match-ha{
     font-family:var(--font-mono); font-size:10px; letter-spacing:.06em;
@@ -398,34 +403,39 @@ const SQUAD = [
 ];
 
 // Spielplan Saison 2026/27 (H = Heim in der Hagelschutz.com Arena, A = Auswärts)
-const FIXTURES = [
-  {date:"2026-08-15",time:"17:00",home:true, opp:"Krottendorf"},
-  {date:"2026-08-21",time:"19:00",home:false,opp:"Pischelsdorf"},
-  {date:"2026-08-29",time:"17:00",home:true, opp:"Lafnitz II"},
-  {date:"2026-09-04",time:"18:30",home:false,opp:"Dietersdorf"},
-  {date:"2026-09-12",time:"16:00",home:true, opp:"Hartberg/U."},
-  {date:"2026-09-18",time:"19:00",home:false,opp:"Kirchberg"},
-  {date:"2026-09-26",time:"16:00",home:true, opp:"Greinbach"},
-  {date:"2026-10-02",time:"19:00",home:false,opp:"Ilztal"},
-  {date:"2026-10-10",time:"15:00",home:true, opp:"Almenland"},
-  {date:"2026-10-17",time:"18:30",home:false,opp:"Waldbach"},
-  {date:"2026-10-24",time:"14:00",home:true, opp:"St. Peter/O."},
-  {date:"2026-11-01",time:"14:00",home:false,opp:"St. Margarethen"},
-  {date:"2026-11-07",time:"14:00",home:true, opp:"Deutsch Goritz"},
-  {date:"2027-03-12",time:"19:00",home:false,opp:"Krottendorf"},
-  {date:"2027-03-20",time:"15:00",home:true, opp:"Pischelsdorf"},
-  {date:"2027-03-27",time:"19:00",home:false,opp:"Lafnitz II"},
-  {date:"2027-04-03",time:"16:00",home:true, opp:"Dietersdorf"},
-  {date:"2027-04-10",time:"17:00",home:false,opp:"Hartberg/U."},
-  {date:"2027-04-17",time:"16:00",home:true, opp:"Kirchberg"},
-  {date:"2027-04-23",time:"19:00",home:false,opp:"Greinbach"},
-  {date:"2027-05-01",time:"17:00",home:true, opp:"Ilztal"},
-  {date:"2027-05-08",time:"17:00",home:false,opp:"Almenland"},
-  {date:"2027-05-15",time:"17:00",home:true, opp:"Waldbach"},
-  {date:"2027-05-22",time:"17:00",home:false,opp:"St. Peter/O."},
-  {date:"2027-05-28",time:"18:30",home:true, opp:"St. Margarethen"},
-  {date:"2027-06-04",time:"18:30",home:false,opp:"Deutsch Goritz"},
+// Dient als Absicherung, falls die Google-Tabelle (unten) einmal nicht erreichbar ist.
+const FIXTURES_FALLBACK = [
+  {date:"2026-08-15",time:"17:00",home:true, opp:"Krottendorf",      comp:"Meisterschaftsspiel"},
+  {date:"2026-08-21",time:"19:00",home:false,opp:"Pischelsdorf",     comp:"Meisterschaftsspiel"},
+  {date:"2026-08-29",time:"17:00",home:true, opp:"Lafnitz II",       comp:"Meisterschaftsspiel"},
+  {date:"2026-09-04",time:"18:30",home:false,opp:"Dietersdorf",      comp:"Meisterschaftsspiel"},
+  {date:"2026-09-12",time:"16:00",home:true, opp:"Hartberg/U.",      comp:"Meisterschaftsspiel"},
+  {date:"2026-09-18",time:"19:00",home:false,opp:"Kirchberg",        comp:"Meisterschaftsspiel"},
+  {date:"2026-09-26",time:"16:00",home:true, opp:"Greinbach",        comp:"Meisterschaftsspiel"},
+  {date:"2026-10-02",time:"19:00",home:false,opp:"Ilztal",           comp:"Meisterschaftsspiel"},
+  {date:"2026-10-10",time:"15:00",home:true, opp:"Almenland",        comp:"Meisterschaftsspiel"},
+  {date:"2026-10-17",time:"18:30",home:false,opp:"Waldbach",         comp:"Meisterschaftsspiel"},
+  {date:"2026-10-24",time:"14:00",home:true, opp:"St. Peter/O.",     comp:"Meisterschaftsspiel"},
+  {date:"2026-11-01",time:"14:00",home:false,opp:"St. Margarethen",  comp:"Meisterschaftsspiel"},
+  {date:"2026-11-07",time:"14:00",home:true, opp:"Deutsch Goritz",   comp:"Meisterschaftsspiel"},
+  {date:"2027-03-12",time:"19:00",home:false,opp:"Krottendorf",      comp:"Meisterschaftsspiel"},
+  {date:"2027-03-20",time:"15:00",home:true, opp:"Pischelsdorf",     comp:"Meisterschaftsspiel"},
+  {date:"2027-03-27",time:"19:00",home:false,opp:"Lafnitz II",       comp:"Meisterschaftsspiel"},
+  {date:"2027-04-03",time:"16:00",home:true, opp:"Dietersdorf",      comp:"Meisterschaftsspiel"},
+  {date:"2027-04-10",time:"17:00",home:false,opp:"Hartberg/U.",      comp:"Meisterschaftsspiel"},
+  {date:"2027-04-17",time:"16:00",home:true, opp:"Kirchberg",        comp:"Meisterschaftsspiel"},
+  {date:"2027-04-23",time:"19:00",home:false,opp:"Greinbach",        comp:"Meisterschaftsspiel"},
+  {date:"2027-05-01",time:"17:00",home:true, opp:"Ilztal",           comp:"Meisterschaftsspiel"},
+  {date:"2027-05-08",time:"17:00",home:false,opp:"Almenland",        comp:"Meisterschaftsspiel"},
+  {date:"2027-05-15",time:"17:00",home:true, opp:"Waldbach",         comp:"Meisterschaftsspiel"},
+  {date:"2027-05-22",time:"17:00",home:false,opp:"St. Peter/O.",     comp:"Meisterschaftsspiel"},
+  {date:"2027-05-28",time:"18:30",home:true, opp:"St. Margarethen",  comp:"Meisterschaftsspiel"},
+  {date:"2027-06-04",time:"18:30",home:false,opp:"Deutsch Goritz",   comp:"Meisterschaftsspiel"},
 ];
+
+// Spielplan: URL einer zweiten, als CSV veröffentlichten Tabelle (eigenes Tabellenblatt).
+// Leer lassen, um vorerst die feste Liste oben zu verwenden.
+const SPIELPLAN_CSV_URL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vR9RHyz2B02ITUrOQtYAilxHe7TUAomMX6V1r9AxyiNWs11-WEObnlZxxjXM72aT1Hxd-98jpk3fe9j/pub?gid=1985225472&single=true&output=csv";
 
 // Aufstellung: URL einer als CSV veröffentlichten Google-Tabelle.
 // Leer lassen, solange es noch keine gibt -> Platzhalter wird angezeigt.
@@ -445,11 +455,16 @@ function matchDateTime(f){ return new Date(f.date + "T" + f.time + ":00"); }
 function fmtShortDate(d){ return WEEKDAYS[d.getDay()] + ", " + d.getDate() + "." + MONTHS[d.getMonth()]; }
 function fmtDayNum(d){ return d.getDate().toString().padStart(2,"0") + "." + (d.getMonth()+1).toString().padStart(2,"0"); }
 
-const now = new Date();
-const withDT = FIXTURES.map(f => ({...f, dt: matchDateTime(f)}));
-const upcoming = withDT.filter(f => f.dt >= now).sort((a,b)=>a.dt-b.dt);
-const past = withDT.filter(f => f.dt < now).sort((a,b)=>a.dt-b.dt);
-const nextMatch = upcoming[0];
+let now = new Date();
+let withDT = [], upcoming = [], past = [], nextMatch = null;
+
+function computeDerived(fixtures){
+  now = new Date();
+  withDT = fixtures.map(f => ({...f, dt: matchDateTime(f)})).filter(f => !isNaN(f.dt));
+  upcoming = withDT.filter(f => f.dt >= now).sort((a,b)=>a.dt-b.dt);
+  past = withDT.filter(f => f.dt < now).sort((a,b)=>a.dt-b.dt);
+  nextMatch = upcoming[0];
+}
 
 /* ====================================================================
    HERO: NÄCHSTES SPIEL TICKET + COUNTDOWN
@@ -465,7 +480,7 @@ function renderTicket(){
   const venueLine = nextMatch.home ? VENUE : "bei " + nextMatch.opp;
   el.innerHTML =
     '<div class="ticket-top">' +
-      '<div class="ticket-label"><span>Nächstes Spiel</span><span class="ha">' + haLabel + '</span></div>' +
+      '<div class="ticket-label"><span>Nächstes Spiel'+(nextMatch.comp ? " · "+nextMatch.comp : "")+'</span><span class="ha">' + haLabel + '</span></div>' +
       '<div class="ticket-opponent">' + (nextMatch.home ? "vs. " : "bei ") + nextMatch.opp + '</div>' +
       '<div class="ticket-meta"><b>' + fmtShortDate(nextMatch.dt) + '</b><span>' + nextMatch.time + ' Uhr</span></div>' +
       '<div class="ticket-venue">' + venueLine + '</div>' +
@@ -479,12 +494,58 @@ function renderTicket(){
   // Winterpause-Hinweis, wenn die Lücke zum vorherigen Spiel groß ist
   const prevDT = past.length ? past[past.length-1].dt : null;
   const gapDays = prevDT ? (nextMatch.dt - prevDT) / 86400000 : 0;
-  if(gapDays > 45){
-    document.getElementById("winterpause-note").classList.remove("hidden");
-  }
+  document.getElementById("winterpause-note").classList.toggle("hidden", gapDays <= 45);
 
   updateCountdown();
   setInterval(updateCountdown, 30000);
+}
+
+function parseFixturesCSV(text){
+  text = text.replace(/^\uFEFF/, "");
+  const lines = text.trim().split(/\r?\n/);
+  const rawHeaders = lines[0].split(",").map(h=>foldKey(h));
+  function findCol(matchFn){ return rawHeaders.findIndex(matchFn); }
+  const col = {
+    date: findCol(h => h.includes("datum")),
+    time: findCol(h => h.includes("zeit")),
+    ha: findCol(h => h.includes("heim")),
+    opp: findCol(h => h.includes("gegner")),
+    comp: findCol(h => h.includes("wettbewerb") || h.includes("bewerb")),
+  };
+  return lines.slice(1).filter(l=>l.trim()!=="").map(line=>{
+    const cells = line.split(",").map(c=>c.trim());
+    const get = i => (i>=0 && cells[i]) ? cells[i] : "";
+    // Datum als TT.MM.JJJJ erwartet -> ISO umwandeln
+    const rawDate = get(col.date);
+    const parts = rawDate.split(".");
+    const isoDate = parts.length===3 ? parts[2]+"-"+parts[1].padStart(2,"0")+"-"+parts[0].padStart(2,"0") : rawDate;
+    const haVal = foldKey(get(col.ha));
+    return {
+      date: isoDate,
+      time: get(col.time),
+      home: haVal.startsWith("h"),
+      opp: get(col.opp),
+      comp: get(col.comp),
+    };
+  }).filter(f => f.date && f.time && f.opp);
+}
+
+function loadMatches(){
+  computeDerived(FIXTURES_FALLBACK);
+  renderTicket();
+  renderSpielplan();
+
+  if(!SPIELPLAN_CSV_URL) return;
+  fetch(SPIELPLAN_CSV_URL, {cache:"no-store"})
+    .then(r => { if(!r.ok) throw new Error("HTTP-Status "+r.status); return r.text(); })
+    .then(text => {
+      const fixtures = parseFixturesCSV(text);
+      if(fixtures.length === 0){ console.log("[Spielplan] Tabelle leer oder Spalten nicht erkannt, bleibe bei fester Liste."); return; }
+      computeDerived(fixtures);
+      renderTicket();
+      renderSpielplan();
+    })
+    .catch(err => console.error("[Spielplan] Fehler beim Laden der Tabelle, bleibe bei fester Liste:", err));
 }
 
 function updateCountdown(){
@@ -520,7 +581,7 @@ function renderSpielplan(){
     const timeOrPlayed = isPast ? '<span class="match-time">gespielt</span>' : '<span class="match-time">'+f.time+'</span>';
     return '<div class="'+cls+'">' +
       '<div class="match-date">'+WEEKDAYS[f.dt.getDay()]+'<b>'+fmtDayNum(f.dt)+'</b></div>' +
-      '<div class="match-opp">'+f.opp+'</div>' +
+      '<div class="match-opp">'+f.opp+(f.comp ? '<span class="match-comp">'+f.comp+'</span>' : '')+'</div>' +
       '<span class="match-ha">'+(f.home?"H":"A")+'</span>' +
       timeOrPlayed +
     '</div>';
@@ -548,14 +609,17 @@ function renderSpielplan(){
   fullWrap.innerHTML = fullHTML;
   container.appendChild(fullWrap);
 
-  document.getElementById("toggle-all-btn").addEventListener("click", function(){
-    const preview = document.getElementById("sp-preview");
-    const full = document.getElementById("sp-full");
-    const showingFull = !full.classList.contains("hidden");
-    preview.classList.toggle("hidden", !showingFull);
-    full.classList.toggle("hidden", showingFull);
-    this.textContent = showingFull ? "Ganzen Spielplan anzeigen" : "Nur nächste Spiele anzeigen";
-  });
+  document.getElementById("toggle-all-btn").removeEventListener("click", toggleAllHandler);
+  document.getElementById("toggle-all-btn").addEventListener("click", toggleAllHandler);
+}
+
+function toggleAllHandler(){
+  const preview = document.getElementById("sp-preview");
+  const full = document.getElementById("sp-full");
+  const showingFull = !full.classList.contains("hidden");
+  preview.classList.toggle("hidden", !showingFull);
+  full.classList.toggle("hidden", showingFull);
+  this.textContent = showingFull ? "Ganzen Spielplan anzeigen" : "Nur nächste Spiele anzeigen";
 }
 
 /* ====================================================================
@@ -735,8 +799,7 @@ function loadLineup(){
 /* ====================================================================
    INIT
    ==================================================================== */
-renderTicket();
-renderSpielplan();
+loadMatches();
 renderKader();
 loadLineup();
 </script>
