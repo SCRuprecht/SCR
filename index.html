@@ -689,8 +689,10 @@ function renderLineup(rows){
   bandsPresent.forEach(band=>{
     const row = placed.filter(p=>p.band===band).sort((a,b)=>a.lr-b.lr || a.rueckennummer-b.rueckennummer);
     const n = row.length;
+    // Stuermer enger zusammen, etwa auf Hoehe der Fuenfmeterraum-Ecken
+    const [minX,maxX] = band===5 ? [38,62] : [15,85];
     row.forEach((p,i)=>{
-      const x = n===1 ? 50 : 15 + i*(70/(n-1));
+      const x = n===1 ? (minX+maxX)/2 : minX + i*((maxX-minX)/(n-1));
       const y = yFor(band);
       const name = bySquadNr[p.rueckennummer] || ("#"+p.rueckennummer);
       const shortName = name.split(" ").pop();
