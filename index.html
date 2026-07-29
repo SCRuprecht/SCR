@@ -634,7 +634,9 @@ function classifyPosition(raw){
   }
   else if(k){ abbr = k.slice(0,2).toUpperCase(); }
 
-  const lr = k.includes("links") ? 0 : k.includes("recht") ? 2 : 1;
+  // Das eigene Tor steht oben im Bild, die Mannschaft greift nach unten an - die Spieler
+  // stehen also mit dem Ruecken zur Kamera. "Links" aus Spielersicht ist daher rechts im Bild.
+  const lr = k.includes("links") ? 2 : k.includes("recht") ? 0 : 1;
   return {band, abbr, lr};
 }
 
