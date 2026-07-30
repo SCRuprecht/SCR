@@ -268,6 +268,7 @@
   .league-table td{ padding:8px 8px; border-bottom:1px solid var(--hair); white-space:nowrap; }
   .league-table th.num, .league-table td.num{ text-align:right; }
   .league-table td.team{ font-family:var(--font-body); font-weight:600; white-space:normal; }
+  .league-table td.pkt{ font-weight:700; }
   .league-table tr.own{ background:var(--ink); color:var(--paper); }
   .league-table tr.own td{ border-bottom-color:rgba(250,249,246,.14); }
   .empty-table{
@@ -905,18 +906,18 @@ function renderTabelle(rows){
       '<td class="num">'+(i+1)+'</td>' +
       '<td class="team">'+r.team+'</td>' +
       '<td class="num">'+r.sp+'</td>' +
+      '<td class="num">'+r.diff+'</td>' +
+      '<td class="num pkt">'+r.pkt+'</td>' +
       '<td class="num">'+r.s+'</td>' +
       '<td class="num">'+r.u+'</td>' +
       '<td class="num">'+r.n+'</td>' +
       '<td class="num">'+r.tore+'</td>' +
-      '<td class="num">'+r.diff+'</td>' +
-      '<td class="num">'+r.pkt+'</td>' +
     '</tr>';
   }).join("");
   document.getElementById("tabelle-container").innerHTML =
     '<div class="table-scroll"><table class="league-table">' +
-      '<thead><tr><th>#</th><th>Verein</th><th class="num">Sp</th><th class="num">G</th><th class="num">U</th>' +
-      '<th class="num">V</th><th class="num">Tore</th><th class="num">Diff</th><th class="num">Pkt</th></tr></thead>' +
+      '<thead><tr><th>#</th><th>Verein</th><th class="num">Sp</th><th class="num">Diff</th><th class="num">Pkt</th>' +
+      '<th class="num">G</th><th class="num">U</th><th class="num">V</th><th class="num">Tore</th></tr></thead>' +
       '<tbody>'+body+'</tbody>' +
     '</table></div>';
 }
