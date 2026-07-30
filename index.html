@@ -256,6 +256,25 @@
     color:rgba(250,249,246,.9);
   }
 
+  /* ---------- tabelle ---------- */
+  .table-scroll{ overflow-x:auto; -webkit-overflow-scrolling:touch; }
+  .league-table{
+    width:100%; min-width:480px; border-collapse:collapse; font-family:var(--font-mono); font-size:12.5px;
+  }
+  .league-table th{
+    text-align:left; font-weight:400; font-size:10.5px; letter-spacing:.06em; text-transform:uppercase;
+    color:var(--mid); padding:0 8px 8px; border-bottom:1px solid var(--hair);
+  }
+  .league-table td{ padding:8px 8px; border-bottom:1px solid var(--hair); white-space:nowrap; }
+  .league-table th.num, .league-table td.num{ text-align:right; }
+  .league-table td.team{ font-family:var(--font-body); font-weight:600; white-space:normal; }
+  .league-table tr.own{ background:var(--ink); color:var(--paper); }
+  .league-table tr.own td{ border-bottom-color:rgba(250,249,246,.14); }
+  .empty-table{
+    background:var(--pitch); color:var(--paper); border-radius:6px; padding:32px 24px; text-align:center;
+  }
+  .empty-table p{ font-family:var(--font-body); font-size:14.5px; color:rgba(250,249,246,.9); margin:0; }
+
   /* ---------- kader ---------- */
   .staff-line{
     font-family:var(--font-mono); font-size:12px; color:var(--mid);
@@ -352,6 +371,16 @@
     </div>
     <div id="spielplan-container"><!-- filled by JS --></div>
     <button class="toggle-all" id="toggle-all-btn">Ganzen Spielplan anzeigen</button>
+  </div>
+</section>
+
+<section id="tabelle">
+  <div class="wrap">
+    <div class="sec-head">
+      <div class="sec-eyebrow">Oberliga Süd/Ost</div>
+      <div class="sec-title">Tabelle</div>
+    </div>
+    <div id="tabelle-container"><!-- filled by JS --></div>
   </div>
 </section>
 
@@ -463,6 +492,9 @@ const FIXTURES_FALLBACK = [
 // Spielplan: URL einer zweiten, als CSV veröffentlichten Tabelle (eigenes Tabellenblatt).
 // Leer lassen, um vorerst die feste Liste oben zu verwenden.
 const SPIELPLAN_CSV_URL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vR9RHyz2B02ITUrOQtYAilxHe7TUAomMX6V1r9AxyiNWs11-WEObnlZxxjXM72aT1Hxd-98jpk3fe9j/pub?gid=1985225472&single=true&output=csv";
+
+// Tabelle: URL eines vierten Tabellenblatts (Inhalt einfach von ligaportal.at kopiert & eingefügt).
+const TABELLE_CSV_URL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vR9RHyz2B02ITUrOQtYAilxHe7TUAomMX6V1r9AxyiNWs11-WEObnlZxxjXM72aT1Hxd-98jpk3fe9j/pub?gid=1770315015&single=true&output=csv";
 
 // Sponsoren: URL einer dritten, als CSV veröffentlichten Tabelle (eigenes Tabellenblatt, Spalten "Name" und "Link").
 // Leer lassen, um den Bereich vorerst auszublenden.
@@ -830,6 +862,71 @@ function loadLineup(){
 }
 
 /* ====================================================================
+   TABELLE (aus Google-Sheet-CSV, Inhalt per Copy-Paste von ligaportal.at)
+   ==================================================================== */
+function parseTabelleCSV(text){
+  text = text.replace(/^\uFEFF/, "");
+  const lines = text.trim().split(/\r?\n/);
+  const rawHeaders = lines[0].split(",").map(h=>foldKey(h));
+  function findCol(matchFn){ return rawHeaders.findIndex(matchFn); }
+  const col = {
+    team: findCol(h => h.includes("verein") || h.includes("mannschaft") || h.includes("team") || h.includes("klub")),
+    sp:   findCol(h => h.includes("sp")),
+    s:    findCol(h => h==="s" || h.includes("sieg")),
+    u:    findCol(h => h==="u" || h.includes("unent")),
+    n:    findCol(h => h==="n" || h.includes("niederl")),
+    tore: findCol(h => h.includes("tore")),
+    diff: findCol(h => h.includes("diff")),
+    pkt:  findCol(h => h.includes("punkte") || h.includes("pkt") || h==="pk"),
+  };
+  return lines.slice(1).filter(l=>l.trim()!=="").map(line=>{
+    const cells = line.split(",").map(c=>c.trim());
+    const get = i => (i>=0 && cells[i]!==undefined) ? cells[i] : "";
+    return {
+      team: get(col.team), sp: get(col.sp), s: get(col.s), u: get(col.u), n: get(col.n),
+      tore: get(col.tore), diff: get(col.diff), pkt: get(col.pkt),
+    };
+  }).filter(r => r.team);
+}
+
+function renderEmptyTabelle(){
+  document.getElementById("tabelle-container").innerHTML =
+    '<div class="empty-table"><p>Die Tabelle wird nach jedem Spieltag aktualisiert. Schaut bald wieder vorbei.</p></div>';
+}
+
+function renderTabelle(rows){
+  if(rows.length === 0){ renderEmptyTabelle(); return; }
+  const body = rows.map((r,i)=>{
+    const isOwn = foldKey(r.team).includes("ruprecht");
+    return '<tr class="'+(isOwn?"own":"")+'">' +
+      '<td class="num">'+(i+1)+'</td>' +
+      '<td class="team">'+r.team+'</td>' +
+      '<td class="num">'+r.sp+'</td>' +
+      '<td class="num">'+r.s+'</td>' +
+      '<td class="num">'+r.u+'</td>' +
+      '<td class="num">'+r.n+'</td>' +
+      '<td class="num">'+r.tore+'</td>' +
+      '<td class="num">'+r.diff+'</td>' +
+      '<td class="num">'+r.pkt+'</td>' +
+    '</tr>';
+  }).join("");
+  document.getElementById("tabelle-container").innerHTML =
+    '<div class="table-scroll"><table class="league-table">' +
+      '<thead><tr><th>#</th><th>Verein</th><th class="num">Sp</th><th class="num">S</th><th class="num">U</th>' +
+      '<th class="num">N</th><th class="num">Tore</th><th class="num">Diff</th><th class="num">Pkt</th></tr></thead>' +
+      '<tbody>'+body+'</tbody>' +
+    '</table></div>';
+}
+
+function loadTabelle(){
+  if(!TABELLE_CSV_URL){ renderEmptyTabelle(); return; }
+  fetch(TABELLE_CSV_URL, {cache:"no-store"})
+    .then(r => { if(!r.ok) throw new Error("HTTP-Status "+r.status); return r.text(); })
+    .then(text => renderTabelle(parseTabelleCSV(text)))
+    .catch(err => { console.error("[Tabelle] Fehler beim Laden der Tabelle:", err); renderEmptyTabelle(); });
+}
+
+/* ====================================================================
    SPONSOREN (aus Google-Sheet-CSV, Bereich bleibt ausgeblendet ohne Daten)
    ==================================================================== */
 function parseSponsorsCSV(text){
@@ -871,6 +968,7 @@ function loadSponsors(){
 loadMatches();
 renderKader();
 loadLineup();
+loadTabelle();
 loadSponsors();
 </script>
 </body>
