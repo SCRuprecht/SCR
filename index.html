@@ -879,6 +879,9 @@ function parseTabelleCSV(text){
     diff: findCol(h => h==="d" || h.includes("diff")),
     pkt:  findCol(h => h==="p" || h.includes("punkte") || h.includes("pkt")),
   };
+  // ligaportal.at liefert die Vereinsspalte beim Kopieren oft ohne eigene Überschrift
+  // (Layout: Platz, Verein, S, G, U, V, ...) - in dem Fall die zweite Spalte annehmen.
+  if(col.team === -1) col.team = 1;
   return lines.slice(1).filter(l=>l.trim()!=="").map(line=>{
     const cells = line.split(",").map(c=>c.trim());
     const get = i => (i>=0 && cells[i]!==undefined) ? cells[i] : "";
