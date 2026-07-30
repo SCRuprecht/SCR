@@ -871,13 +871,13 @@ function parseTabelleCSV(text){
   function findCol(matchFn){ return rawHeaders.findIndex(matchFn); }
   const col = {
     team: findCol(h => h.includes("verein") || h.includes("mannschaft") || h.includes("team") || h.includes("klub")),
-    sp:   findCol(h => h.includes("sp")),
-    s:    findCol(h => h==="s" || h.includes("sieg")),
+    sp:   findCol(h => h==="s" || h.includes("spiele")),
+    s:    findCol(h => h==="g" || h.includes("gewonn")),
     u:    findCol(h => h==="u" || h.includes("unent")),
-    n:    findCol(h => h==="n" || h.includes("niederl")),
+    n:    findCol(h => h==="v" || h.includes("verlor")),
     tore: findCol(h => h.includes("tore")),
-    diff: findCol(h => h.includes("diff")),
-    pkt:  findCol(h => h.includes("punkte") || h.includes("pkt") || h==="pk"),
+    diff: findCol(h => h==="d" || h.includes("diff")),
+    pkt:  findCol(h => h==="p" || h.includes("punkte") || h.includes("pkt")),
   };
   return lines.slice(1).filter(l=>l.trim()!=="").map(line=>{
     const cells = line.split(",").map(c=>c.trim());
@@ -912,8 +912,8 @@ function renderTabelle(rows){
   }).join("");
   document.getElementById("tabelle-container").innerHTML =
     '<div class="table-scroll"><table class="league-table">' +
-      '<thead><tr><th>#</th><th>Verein</th><th class="num">Sp</th><th class="num">S</th><th class="num">U</th>' +
-      '<th class="num">N</th><th class="num">Tore</th><th class="num">Diff</th><th class="num">Pkt</th></tr></thead>' +
+      '<thead><tr><th>#</th><th>Verein</th><th class="num">Sp</th><th class="num">G</th><th class="num">U</th>' +
+      '<th class="num">V</th><th class="num">Tore</th><th class="num">Diff</th><th class="num">Pkt</th></tr></thead>' +
       '<tbody>'+body+'</tbody>' +
     '</table></div>';
 }
