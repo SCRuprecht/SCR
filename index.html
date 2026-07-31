@@ -865,6 +865,24 @@ function loadLineup(){
 /* ====================================================================
    TABELLE (aus Google-Sheet-CSV, Inhalt per Copy-Paste von ligaportal.at)
    ==================================================================== */
+// ligaportal.at kuerzt manche Vereinsnamen beim Kopieren mit "…" ab (wegen der Verlinkung).
+// Hier stehen die korrekten Namen, damit die Website trotzdem sauber ausschreibt.
+const TEAM_NAME_FIXES = [
+  {prefix:"Dietersdorf/Loip", full:"Dietersdorf/Loipersdorf"},
+  {prefix:"SC St. Ruprecht/", full:"SC St. Ruprecht/R."},
+  {prefix:"SC St. Margareth", full:"SC St. Margarethen/R."},
+  {prefix:"TSV Kirchberg/R.", full:"TSV Kirchberg/R."},
+  {prefix:"Tus St. Peter/O.", full:"Tus St. Peter/O."},
+  {prefix:"USV Deutsch Gori", full:"USV Deutsch Goritz"},
+];
+
+function fixTeamName(name){
+  if(!name || !name.includes("…")) return name;
+  const stripped = name.replace(/…/g,"").trim();
+  const hit = TEAM_NAME_FIXES.find(f => stripped.startsWith(f.prefix) || f.prefix.startsWith(stripped));
+  return hit ? hit.full : name;
+}
+
 function parseTabelleCSV(text){
   text = text.replace(/^\uFEFF/, "");
   const lines = text.trim().split(/\r?\n/);
@@ -887,7 +905,7 @@ function parseTabelleCSV(text){
     const cells = line.split(",").map(c=>c.trim());
     const get = i => (i>=0 && cells[i]!==undefined) ? cells[i] : "";
     return {
-      team: get(col.team), sp: get(col.sp), s: get(col.s), u: get(col.u), n: get(col.n),
+      team: fixTeamName(get(col.team)), sp: get(col.sp), s: get(col.s), u: get(col.u), n: get(col.n),
       tore: get(col.tore), diff: get(col.diff), pkt: get(col.pkt),
     };
   }).filter(r => r.team);
