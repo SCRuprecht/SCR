@@ -457,6 +457,7 @@ const SQUAD = [
   {nr:27, name:"Heiko Rieger"},
   {nr:28, name:"Florian Pösinger"},
   {nr:39, name:"Markus Meier"},
+  {nr:37, name:"Wikony Günther"},
 ];
 
 // Spielplan Saison 2026/27 (H = Heim in der Hagelschutz.com Arena, A = Auswärts)
@@ -600,6 +601,7 @@ function loadMatches(){
   computeDerived(FIXTURES_FALLBACK);
   renderTicket();
   renderSpielplan();
+  loadLineup();
 
   if(!SPIELPLAN_CSV_URL) return;
   fetch(SPIELPLAN_CSV_URL, {cache:"no-store"})
@@ -610,6 +612,7 @@ function loadMatches(){
       computeDerived(fixtures);
       renderTicket();
       renderSpielplan();
+      loadLineup();
     })
     .catch(err => console.error("[Spielplan] Fehler beim Laden der Tabelle, bleibe bei fester Liste:", err));
 }
@@ -703,7 +706,7 @@ function renderKader(){
    AUFSTELLUNG (aus Google-Sheet-CSV, mit Platzhalter als Fallback)
    ==================================================================== */
 function foldKey(s){
-  return (s||"").normalize("NFD").replace(/[\u0300-\u036f]/g,"").toLowerCase().trim();
+  return (s||"").replace(/ß/g,"ss").normalize("NFD").replace(/[\u0300-\u036f]/g,"").toLowerCase().trim();
 }
 
 function parseCSV(text){
@@ -789,8 +792,26 @@ function renderEmptyLineup(){
   c.innerHTML =
     '<div class="empty-lineup">' +
       '<div class="stub">Noch nicht veröffentlicht</div>' +
-      '<p>Die Aufstellung wird von der Vereinsleitung ca. eine Stunde vor Anpfiff freigegeben. Schaut kurz vor Spielbeginn hier noch einmal vorbei.</p>' +
+      '<p>Die Aufstellung wird ab Spielbeginn veröffentlicht. Schaut ab Anpfiff hier noch einmal vorbei.</p>' +
     '</div>';
+}
+
+function renderLockedLineup(){
+  const c = document.getElementById("lineup-container");
+  c.innerHTML =
+    '<div class="empty-lineup">' +
+      '<div class="stub">Noch nicht veröffentlicht</div>' +
+      '<p>Die Aufstellung wird erst mit Anpfiff veröffentlicht. Schaut ab Spielbeginn hier noch einmal vorbei.</p>' +
+    '</div>';
+}
+
+// Das Spiel, an dessen Anstoss die Aufstellungs-Freigabe haengt: entweder ein Spiel, das gerade
+// laeuft/kuerzlich angepfiffen wurde, oder sonst das naechste kommende (dann bleibt es gesperrt).
+function getLineupGateMatch(){
+  const MATCH_WINDOW = 3*60*60*1000; // 3 Stunden
+  const recentPast = past.length ? past[past.length-1] : null;
+  if(recentPast && (now - recentPast.dt) < MATCH_WINDOW) return recentPast;
+  return nextMatch || null;
 }
 
 function renderLineup(rows){
@@ -821,8 +842,9 @@ function renderLineup(rows){
   bandsPresent.forEach(band=>{
     const row = placed.filter(p=>p.band===band).sort((a,b)=>a.lr-b.lr || a.rueckennummer-b.rueckennummer);
     const n = row.length;
-    // Stuermer enger zusammen, etwa auf Hoehe der Fuenfmeterraum-Ecken
-    const [minX,maxX] = band===5 ? [38,62] : [15,85];
+    // Stuermer und defensives Mittelfeld enger zusammen (Hoehe Innenverteidiger/Fuenfmeterraum),
+    // statt bis an die Aussenlinie zu spreizen
+    const [minX,maxX] = (band===5 || band===2) ? [38,62] : [15,85];
     row.forEach((p,i)=>{
       const x = n===1 ? (minX+maxX)/2 : minX + i*((maxX-minX)/(n-1));
       const y = yFor(band);
@@ -849,6 +871,12 @@ function renderLineup(rows){
 }
 
 function loadLineup(){
+  const gateMatch = getLineupGateMatch();
+  if(gateMatch && gateMatch.dt > now){
+    console.log("[Aufstellung] Vor Anpfiff gesperrt, Freigabe erst ab:", gateMatch.dt);
+    renderLockedLineup();
+    return;
+  }
   if(!LINEUP_CSV_URL){ console.log("[Aufstellung] Kein LINEUP_CSV_URL gesetzt."); renderEmptyLineup(); return; }
   fetch(LINEUP_CSV_URL, {cache:"no-store"})
     .then(r => { if(!r.ok) throw new Error("HTTP-Status "+r.status); return r.text(); })
@@ -1009,7 +1037,6 @@ function loadSponsors(){
    ==================================================================== */
 loadMatches();
 renderKader();
-loadLineup();
 loadTabelle();
 loadSponsors();
 </script>
