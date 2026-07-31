@@ -883,6 +883,26 @@ function fixTeamName(name){
   return hit ? hit.full : name;
 }
 
+// ligaportal.at haengt beim Kopieren manchmal den vollen Namen zusaetzlich an den (bereits vollstaendigen)
+// sichtbaren Namen an, z.B. "FC Almenland FC Almenland" -> einmal zusammenkuerzen.
+function dedupeTeamName(name){
+  if(!name) return name;
+  const t = name.trim();
+  const n = t.length;
+  if(n % 2 === 0){
+    const half = n/2;
+    if(t.slice(0,half) === t.slice(half)) return t.slice(0,half).trim();
+  }
+  for(let i=1;i<t.length-1;i++){
+    if(t[i] === ' ' && t.slice(0,i) === t.slice(i+1)) return t.slice(0,i).trim();
+  }
+  return name;
+}
+
+function cleanTeamName(name){
+  return dedupeTeamName(fixTeamName(name));
+}
+
 function parseTabelleCSV(text){
   text = text.replace(/^\uFEFF/, "");
   const lines = text.trim().split(/\r?\n/);
@@ -905,7 +925,7 @@ function parseTabelleCSV(text){
     const cells = line.split(",").map(c=>c.trim());
     const get = i => (i>=0 && cells[i]!==undefined) ? cells[i] : "";
     return {
-      team: fixTeamName(get(col.team)), sp: get(col.sp), s: get(col.s), u: get(col.u), n: get(col.n),
+      team: cleanTeamName(get(col.team)), sp: get(col.sp), s: get(col.s), u: get(col.u), n: get(col.n),
       tore: get(col.tore), diff: get(col.diff), pkt: get(col.pkt),
     };
   }).filter(r => r.team);
