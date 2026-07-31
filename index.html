@@ -597,24 +597,36 @@ function parseFixturesCSV(text){
   }).filter(f => f.date && f.time && f.opp);
 }
 
-function loadMatches(){
-  computeDerived(FIXTURES_FALLBACK);
-  renderTicket();
-  renderSpielplan();
-  loadLineup();
+function renderMatchesLoading(){
+  document.getElementById("next-match-ticket").innerHTML =
+    '<div class="ticket-top"><div class="ticket-label"><span>Spielplan wird geladen…</span></div></div>';
+  document.getElementById("spielplan-container").innerHTML = "";
+}
 
-  if(!SPIELPLAN_CSV_URL) return;
+function loadMatches(){
+  renderMatchesLoading();
+
+  function useFallback(reason){
+    console.log("[Spielplan] "+reason+" - verwende feste Liste.");
+    computeDerived(FIXTURES_FALLBACK);
+    renderTicket();
+    renderSpielplan();
+    loadLineup();
+  }
+
+  if(!SPIELPLAN_CSV_URL){ useFallback("Kein SPIELPLAN_CSV_URL gesetzt"); return; }
+
   fetch(SPIELPLAN_CSV_URL, {cache:"no-store"})
     .then(r => { if(!r.ok) throw new Error("HTTP-Status "+r.status); return r.text(); })
     .then(text => {
       const fixtures = parseFixturesCSV(text);
-      if(fixtures.length === 0){ console.log("[Spielplan] Tabelle leer oder Spalten nicht erkannt, bleibe bei fester Liste."); return; }
+      if(fixtures.length === 0){ useFallback("Tabelle leer oder Spalten nicht erkannt"); return; }
       computeDerived(fixtures);
       renderTicket();
       renderSpielplan();
       loadLineup();
     })
-    .catch(err => console.error("[Spielplan] Fehler beim Laden der Tabelle, bleibe bei fester Liste:", err));
+    .catch(err => useFallback("Fehler beim Laden der Tabelle ("+err+")"));
 }
 
 function updateCountdown(){
