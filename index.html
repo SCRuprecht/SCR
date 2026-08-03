@@ -335,6 +335,22 @@
   }
   .sponsor-chip:hover{ background:var(--ink); color:var(--paper); }
 
+  /* ---------- live ---------- */
+  .live-embed{
+    position:relative; width:100%; padding-bottom:56.25%; height:0;
+    background:var(--pitch); border-radius:6px; overflow:hidden;
+  }
+  .live-embed iframe{ position:absolute; inset:0; width:100%; height:100%; border:0; }
+  .live-badge{
+    display:inline-flex; align-items:center; gap:5px; background:var(--ink); color:var(--paper);
+    font-family:var(--font-mono); font-size:10.5px; letter-spacing:.08em; text-transform:uppercase;
+    padding:3px 8px; border-radius:2px; margin-left:8px;
+  }
+  .live-badge .dot{
+    width:6px; height:6px; border-radius:50%; background:var(--paper); animation:live-pulse 1.6s infinite;
+  }
+  @keyframes live-pulse{ 0%,100%{opacity:1;} 50%{opacity:.3;} }
+
   /* ---------- footer ---------- */
   footer{ padding:34px 0 44px; text-align:center; }
   footer img{ height:46px; margin:0 auto 12px; opacity:.85; }
@@ -365,6 +381,16 @@
     <div class="winterpause-note hidden" id="winterpause-note">Nächstes Spiel nach der Winterpause</div>
   </div>
 </header>
+
+<section id="live" class="hidden">
+  <div class="wrap">
+    <div class="sec-head">
+      <div class="sec-eyebrow">Übertragung</div>
+      <div class="sec-title">Live-Stream</div>
+    </div>
+    <div id="live-container"><!-- filled by JS --></div>
+  </div>
+</section>
 
 <section id="aufstellung">
   <div class="wrap">
@@ -520,6 +546,7 @@ const LINEUP_CSV_URL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vR9RHyz2
 
 const VENUE = "Hagelschutz.com Arena, Flurgasse 352, 8181 St. Ruprecht an der Raab";
 const MAPS_URL = "https://www.google.com/maps/place//data=!4m2!3m1!1s0x476e4f825cdab17b:0x5609bca7a0cbdae7?sa=X&ved=1t:8290&ictx=111";
+const YOUTUBE_CHANNEL_ID = "UCIwKNYl9-pdJUorlMkJHb5A"; // @SC.St.RuprechtRaab
 
 /* ====================================================================
    HILFSFUNKTIONEN
@@ -561,9 +588,10 @@ function renderTicket(){
   const venueLine = nextMatch.home ? VENUE : "bei " + nextMatch.opp;
   const isLive = nextMatch.dt <= now;
   const labelText = (isLive ? "Läuft" : "Nächstes Spiel") + (nextMatch.comp ? " · "+nextMatch.comp : "");
+  const streamBadge = isLiveWindowActive(nextMatch) ? '<span class="live-badge"><span class="dot"></span>Live</span>' : "";
   el.innerHTML =
     '<div class="ticket-top">' +
-      '<div class="ticket-label"><span>'+labelText+'</span><span class="ha">' + haLabel + '</span></div>' +
+      '<div class="ticket-label"><span>'+labelText+streamBadge+'</span><span class="ha">' + haLabel + '</span></div>' +
       '<div class="ticket-opponent">' + (nextMatch.home ? "vs. " : "bei ") + nextMatch.opp + '</div>' +
       '<div class="ticket-meta"><b>' + fmtShortDate(nextMatch.dt) + '</b><span>' + nextMatch.time + ' Uhr</span></div>' +
       '<div class="ticket-venue">' + venueLine + '</div>' +
@@ -595,6 +623,7 @@ function parseFixturesCSV(text){
     opp: findCol(h => h.includes("gegner")),
     comp: findCol(h => h.includes("wettbewerb") || h.includes("bewerb")),
     result: findCol(h => h.includes("ergebnis")),
+    live: findCol(h => h.includes("live")),
   };
   return lines.slice(1).filter(l=>l.trim()!=="").map(line=>{
     const cells = line.split(",").map(c=>c.trim());
@@ -604,6 +633,7 @@ function parseFixturesCSV(text){
     const parts = rawDate.split(".");
     const isoDate = parts.length===3 ? parts[2]+"-"+parts[1].padStart(2,"0")+"-"+parts[0].padStart(2,"0") : rawDate;
     const haVal = foldKey(get(col.ha));
+    const liveVal = foldKey(get(col.live));
     return {
       date: isoDate,
       time: get(col.time),
@@ -611,6 +641,7 @@ function parseFixturesCSV(text){
       opp: get(col.opp),
       comp: get(col.comp),
       result: get(col.result),
+      live: liveVal==="ja" || liveVal==="yes" || liveVal==="x" || liveVal==="1" || liveVal==="live",
     };
   }).filter(f => f.date && f.time && f.opp);
 }
@@ -630,6 +661,7 @@ function loadMatches(){
     renderTicket();
     renderSpielplan();
     loadLineup();
+    renderLiveSection();
   }
 
   if(!SPIELPLAN_CSV_URL){ useFallback("Kein SPIELPLAN_CSV_URL gesetzt"); return; }
@@ -643,6 +675,7 @@ function loadMatches(){
       renderTicket();
       renderSpielplan();
       loadLineup();
+      renderLiveSection();
     })
     .catch(err => useFallback("Fehler beim Laden der Tabelle ("+err+")"));
 }
@@ -941,8 +974,26 @@ function loadLineup(){
 }
 
 /* ====================================================================
-   TABELLE (aus Google-Sheet-CSV, Inhalt per Copy-Paste von ligaportal.at)
+   LIVE-STREAM (YouTube-Kanal-Embed, nur sichtbar wenn im Spielplan als "Live" markiert
+   und ab 15 Minuten vor Anpfiff)
    ==================================================================== */
+function isLiveWindowActive(match){
+  if(!match || !match.live) return false;
+  const LEAD_MS = 15*60*1000;
+  return now >= (match.dt - LEAD_MS);
+}
+
+function renderLiveSection(){
+  const section = document.getElementById("live");
+  if(!isLiveWindowActive(nextMatch)){
+    section.classList.add("hidden");
+    return;
+  }
+  section.classList.remove("hidden");
+  document.getElementById("live-container").innerHTML =
+    '<div class="live-embed"><iframe src="https://www.youtube.com/embed/live_stream?channel='+YOUTUBE_CHANNEL_ID+'&autoplay=0" ' +
+    'title="Live-Stream" allow="autoplay; encrypted-media" allowfullscreen></iframe></div>';
+}
 // ligaportal.at kuerzt manche Vereinsnamen beim Kopieren mit "…" ab (wegen der Verlinkung).
 // Hier stehen die korrekten Namen, damit die Website trotzdem sauber ausschreibt.
 const TEAM_NAME_FIXES = [
