@@ -528,7 +528,12 @@ function computeDerived(fixtures){
   withDT = fixtures.map(f => ({...f, dt: matchDateTime(f)})).filter(f => !isNaN(f.dt));
   upcoming = withDT.filter(f => f.dt >= now).sort((a,b)=>a.dt-b.dt);
   past = withDT.filter(f => f.dt < now).sort((a,b)=>a.dt-b.dt);
-  nextMatch = upcoming[0];
+  const pad = n => String(n).padStart(2,"0");
+  const todayStr = now.getFullYear()+"-"+pad(now.getMonth()+1)+"-"+pad(now.getDate());
+  // Ein Spiel, das heute stattfindet, bleibt bis Tagesende das "naechste/aktuelle" Spiel -
+  // auch nach Anpfiff (dann als "laeuft"), statt sofort auf das folgende Spiel zu springen.
+  const todaysMatch = withDT.find(f => f.date === todayStr);
+  nextMatch = todaysMatch || upcoming[0];
 }
 
 /* ====================================================================
@@ -543,9 +548,11 @@ function renderTicket(){
   }
   const haLabel = nextMatch.home ? "Heim" : "Auswärts";
   const venueLine = nextMatch.home ? VENUE : "bei " + nextMatch.opp;
+  const isLive = nextMatch.dt <= now;
+  const labelText = (isLive ? "Läuft" : "Nächstes Spiel") + (nextMatch.comp ? " · "+nextMatch.comp : "");
   el.innerHTML =
     '<div class="ticket-top">' +
-      '<div class="ticket-label"><span>Nächstes Spiel'+(nextMatch.comp ? " · "+nextMatch.comp : "")+'</span><span class="ha">' + haLabel + '</span></div>' +
+      '<div class="ticket-label"><span>'+labelText+'</span><span class="ha">' + haLabel + '</span></div>' +
       '<div class="ticket-opponent">' + (nextMatch.home ? "vs. " : "bei ") + nextMatch.opp + '</div>' +
       '<div class="ticket-meta"><b>' + fmtShortDate(nextMatch.dt) + '</b><span>' + nextMatch.time + ' Uhr</span></div>' +
       '<div class="ticket-venue">' + venueLine + '</div>' +
