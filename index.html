@@ -194,8 +194,20 @@
     border:1px solid currentColor; border-radius:2px; padding:2px 6px; flex:none;
   }
   .match-time{
-    font-family:var(--font-mono); font-size:12.5px; flex:none; width:44px; text-align:right;
+    font-family:var(--font-mono); font-size:12.5px; flex:none; width:auto; min-width:44px; text-align:right;
   }
+  .match-time.result{
+    font-weight:700; display:inline-flex; align-items:center; gap:6px;
+  }
+  .result-badge{
+    display:inline-flex; align-items:center; justify-content:center;
+    width:18px; height:18px; border-radius:50%; font-size:10px; font-weight:700;
+    border:1.5px solid var(--ink);
+  }
+  .result-badge.win{ background:var(--ink); color:var(--paper); }
+  .result-badge.draw{ background:transparent; color:var(--ink); }
+  .result-badge.loss{ background:transparent; color:var(--mid); border-color:var(--hair); }
+  .match-row.next .result-badge.loss{ color:rgba(250,249,246,.5); border-color:rgba(250,249,246,.25); }
   .toggle-all{
     margin-top:20px; width:100%; text-align:center; background:none;
     border:1.5px solid var(--ink); color:var(--ink); font-family:var(--font-mono);
@@ -665,13 +677,33 @@ function renderSpielplan(){
     const isPast = f.dt < now;
     let cls = "match-row";
     if(isNext) cls += " next";
-    else if(isPast) cls += " past";
-    const timeOrPlayed = isPast ? '<span class="match-time">'+(f.result ? f.result : "gespielt")+'</span>' : '<span class="match-time">'+f.time+'</span>';
+    else if(isPast) cls += f.result ? " played" : " past";
+
+    let resultHTML;
+    if(!isPast){
+      resultHTML = '<span class="match-time">'+f.time+'</span>';
+    } else if(!f.result){
+      resultHTML = '<span class="match-time">gespielt</span>';
+    } else {
+      // Ergebnis steht immer als "Heim:Auswärts" - hier auf Sieg/Unentschieden/Niederlage
+      // aus Sicht von SC St. Ruprecht/Raab umrechnen, damit es auf einen Blick klar ist.
+      const parts = f.result.split(":").map(s=>parseInt(s.trim(),10));
+      let badge = "";
+      if(parts.length===2 && !isNaN(parts[0]) && !isNaN(parts[1])){
+        const ownGoals = f.home ? parts[0] : parts[1];
+        const oppGoals = f.home ? parts[1] : parts[0];
+        const outcome = ownGoals>oppGoals ? "win" : ownGoals<oppGoals ? "loss" : "draw";
+        const label = outcome==="win" ? "S" : outcome==="loss" ? "N" : "U";
+        badge = '<span class="result-badge '+outcome+'">'+label+'</span>';
+      }
+      resultHTML = '<span class="match-time result">'+f.result+badge+'</span>';
+    }
+
     return '<div class="'+cls+'">' +
       '<div class="match-date">'+WEEKDAYS[f.dt.getDay()]+'<b>'+fmtDayNum(f.dt)+'</b></div>' +
       '<div class="match-opp">'+f.opp+(f.comp ? '<span class="match-comp">'+f.comp+'</span>' : '')+'</div>' +
       '<span class="match-ha">'+(f.home?"H":"A")+'</span>' +
-      timeOrPlayed +
+      resultHTML +
     '</div>';
   }
 
