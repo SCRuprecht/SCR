@@ -875,7 +875,7 @@ function renderEmptyLineup(){
   c.innerHTML =
     '<div class="empty-lineup">' +
       '<div class="stub">Noch nicht veröffentlicht</div>' +
-      '<p>Die Aufstellung wird ab Spielbeginn veröffentlicht. Schaut ab Anpfiff hier noch einmal vorbei.</p>' +
+      '<p>Die Aufstellung ist noch nicht eingetragen. Schaut kurz vor Spielbeginn hier noch einmal vorbei.</p>' +
     '</div>';
 }
 
@@ -884,7 +884,7 @@ function renderLockedLineup(){
   c.innerHTML =
     '<div class="empty-lineup">' +
       '<div class="stub">Noch nicht veröffentlicht</div>' +
-      '<p>Die Aufstellung wird erst mit Anpfiff veröffentlicht. Schaut ab Spielbeginn hier noch einmal vorbei.</p>' +
+      '<p>Die Aufstellung wird ab 30 Minuten vor Anpfiff veröffentlicht. Schaut dann hier noch einmal vorbei.</p>' +
     '</div>';
 }
 
@@ -955,8 +955,9 @@ function renderLineup(rows){
 
 function loadLineup(){
   const gateMatch = getLineupGateMatch();
-  if(gateMatch && gateMatch.dt > now){
-    console.log("[Aufstellung] Vor Anpfiff gesperrt, Freigabe erst ab:", gateMatch.dt);
+  const LINEUP_LEAD_MS = 30*60*1000; // 30 Minuten vor Anpfiff
+  if(gateMatch && (gateMatch.dt - LINEUP_LEAD_MS) > now){
+    console.log("[Aufstellung] Gesperrt, Freigabe erst ab (30min vor Anpfiff):", new Date(gateMatch.dt - LINEUP_LEAD_MS));
     renderLockedLineup();
     return;
   }
