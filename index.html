@@ -585,14 +585,14 @@ function renderTicket(){
     return;
   }
   const haLabel = nextMatch.home ? "Heim" : "Auswärts";
-  const venueLine = nextMatch.home ? VENUE : "bei " + nextMatch.opp;
+  const venueLine = nextMatch.home ? VENUE : nextMatch.opp;
   const isLive = nextMatch.dt <= now;
   const labelText = (isLive ? "Läuft" : "Nächstes Spiel") + (nextMatch.comp ? " · "+nextMatch.comp : "");
   const streamBadge = isLiveWindowActive(nextMatch) ? '<span class="live-badge"><span class="dot"></span>Live</span>' : "";
   el.innerHTML =
     '<div class="ticket-top">' +
       '<div class="ticket-label"><span>'+labelText+streamBadge+'</span><span class="ha">' + haLabel + '</span></div>' +
-      '<div class="ticket-opponent">' + (nextMatch.home ? "vs. " : "bei ") + nextMatch.opp + '</div>' +
+      '<div class="ticket-opponent">vs. ' + nextMatch.opp + '</div>' +
       '<div class="ticket-meta"><b>' + fmtShortDate(nextMatch.dt) + '</b><span>' + nextMatch.time + ' Uhr</span></div>' +
       '<div class="ticket-venue">' + venueLine + '</div>' +
     '</div>' +
