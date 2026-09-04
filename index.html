@@ -469,7 +469,9 @@
    ==================================================================== */
 
 // Kader (Rückennummer, Name)
-const SQUAD = [
+// Absicherung, falls die Google-Tabelle (Aufstellung) einmal nicht erreichbar ist -
+// im Normalfall kommt der Kader live aus derselben Tabelle wie die Aufstellung.
+const SQUAD_FALLBACK = [
   {nr:1,  name:"Mateo Mikulcic"},
   {nr:2,  name:"Jan Peter Rodler"},
   {nr:3,  name:"Tobias Richard Mauthner"},
@@ -777,9 +779,9 @@ function toggleAllHandler(){
 /* ====================================================================
    KADER
    ==================================================================== */
-function renderKader(){
+function renderKader(list){
   const grid = document.getElementById("kader-grid");
-  const sorted = [...SQUAD].sort((a,b)=>a.nr-b.nr);
+  const sorted = [...list].sort((a,b)=>a.nr-b.nr);
   grid.innerHTML = sorted.map(p =>
     '<div class="kader-card"><div class="num">'+p.nr+'</div><div class="nm">'+p.name+'</div></div>'
   ).join("");
@@ -801,6 +803,7 @@ function parseCSV(text){
   function findCol(matchFn){ return rawHeaders.findIndex(matchFn); }
   const col = {
     nr: findCol(h => h.includes("nummer")),
+    name: findCol(h => h.includes("name")),
     linie: findCol(h => h.includes("linie")),
     status: findCol(h => h.includes("status")),
     formation: findCol(h => h.includes("formation")),
@@ -813,6 +816,7 @@ function parseCSV(text){
     const get = i => (i>=0 && cells[i]) ? cells[i] : "";
     return {
       rueckennummer: get(col.nr),
+      name: get(col.name),
       linie: get(col.linie),
       status: get(col.status),
       formation: get(col.formation),
@@ -820,6 +824,19 @@ function parseCSV(text){
       cotrainer: get(col.cotrainer),
     };
   });
+}
+
+// Aus allen Zeilen der Aufstellungs-Tabelle den Gesamtkader ableiten (eine Zeile pro
+// Rueckennummer, unabhaengig vom Status fuer das aktuelle Spiel) - so bleibt der Kader
+// auch dann korrekt, wenn jemand fuer ein Spiel "Nicht im Kader" markiert ist.
+function deriveKaderFromRows(rows){
+  const seen = new Map();
+  rows.forEach(r=>{
+    if(r.rueckennummer && r.name && !seen.has(r.rueckennummer)){
+      seen.set(r.rueckennummer, {nr: parseInt(r.rueckennummer,10), name: r.name});
+    }
+  });
+  return [...seen.values()];
 }
 
 // Erkennt aus einem frei eingegebenen Positionstext die Zeile aufs Feld (0=Tor .. 5=Sturm),
@@ -898,7 +915,8 @@ function getLineupGateMatch(){
 }
 
 function renderLineup(rows){
-  const bySquadNr = Object.fromEntries(SQUAD.map(p=>[String(p.nr),p.name]));
+  const fallbackByNr = Object.fromEntries(SQUAD_FALLBACK.map(p=>[String(p.nr),p.name]));
+  const nameFor = p => p.name || fallbackByNr[p.rueckennummer] || ("#"+p.rueckennummer);
   const starters = rows.filter(r => (r.status||"").toLowerCase().startsWith("start"));
   const bench = rows.filter(r => (r.status||"").toLowerCase().startsWith("bank"));
 
@@ -931,7 +949,7 @@ function renderLineup(rows){
     row.forEach((p,i)=>{
       const x = n===1 ? (minX+maxX)/2 : minX + i*((maxX-minX)/(n-1));
       const y = yFor(band);
-      const name = bySquadNr[p.rueckennummer] || ("#"+p.rueckennummer);
+      const name = nameFor(p);
       const shortName = name.split(" ").pop();
       badgesHTML += '<div class="badge" style="left:'+x+'%;top:'+y+'%">' +
         '<div class="num">'+p.rueckennummer+'</div>' +
@@ -942,7 +960,7 @@ function renderLineup(rows){
   });
 
   const benchHTML = bench.map(p=>{
-    const name = bySquadNr[p.rueckennummer] || ("#"+p.rueckennummer);
+    const name = nameFor(p);
     return '<div class="bench-chip"><b>'+p.rueckennummer+'</b>'+name+'</div>';
   }).join("");
 
@@ -959,19 +977,33 @@ function loadLineup(){
   if(gateMatch && (gateMatch.dt - LINEUP_LEAD_MS) > now){
     console.log("[Aufstellung] Gesperrt, Freigabe erst ab (30min vor Anpfiff):", new Date(gateMatch.dt - LINEUP_LEAD_MS));
     renderLockedLineup();
+  }
+  if(!LINEUP_CSV_URL){
+    console.log("[Aufstellung] Kein LINEUP_CSV_URL gesetzt.");
+    if(!(gateMatch && (gateMatch.dt - LINEUP_LEAD_MS) > now)) renderEmptyLineup();
     return;
   }
-  if(!LINEUP_CSV_URL){ console.log("[Aufstellung] Kein LINEUP_CSV_URL gesetzt."); renderEmptyLineup(); return; }
   fetch(LINEUP_CSV_URL, {cache:"no-store"})
     .then(r => { if(!r.ok) throw new Error("HTTP-Status "+r.status); return r.text(); })
     .then(text => {
       console.log("[Aufstellung] CSV geladen, Rohtext (erste 300 Zeichen):", text.slice(0,300));
-      const rows = parseCSV(text).filter(r => r.rueckennummer);
+      const allRows = parseCSV(text);
+      const rows = allRows.filter(r => r.rueckennummer);
       console.log("[Aufstellung] Erkannte Zeilen mit Rückennummer:", rows.length, rows);
+
+      // Kader live aus derselben Tabelle aktualisieren
+      const kader = deriveKaderFromRows(allRows);
+      if(kader.length > 0) renderKader(kader);
+      else console.log("[Kader] Keine Zeilen mit Name+Rückennummer gefunden, behalte bisherigen Kader.");
+
+      if(gateMatch && (gateMatch.dt - LINEUP_LEAD_MS) > now) return; // waehrend Sperre nichts weiter anzeigen
       if(rows.length === 0) renderEmptyLineup();
       else renderLineup(rows);
     })
-    .catch(err => { console.error("[Aufstellung] Fehler beim Laden der Tabelle:", err); renderEmptyLineup(); });
+    .catch(err => {
+      console.error("[Aufstellung] Fehler beim Laden der Tabelle:", err);
+      if(!(gateMatch && (gateMatch.dt - LINEUP_LEAD_MS) > now)) renderEmptyLineup();
+    });
 }
 
 /* ====================================================================
@@ -1138,7 +1170,7 @@ function loadSponsors(){
    INIT
    ==================================================================== */
 loadMatches();
-renderKader();
+renderKader(SQUAD_FALLBACK);
 loadTabelle();
 loadSponsors();
 </script>
