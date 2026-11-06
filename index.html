@@ -534,6 +534,10 @@ const FIXTURES_FALLBACK = [
 // Leer lassen, um vorerst die feste Liste oben zu verwenden.
 const SPIELPLAN_CSV_URL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vR9RHyz2B02ITUrOQtYAilxHe7TUAomMX6V1r9AxyiNWs11-WEObnlZxxjXM72aT1Hxd-98jpk3fe9j/pub?gid=1985225472&single=true&output=csv";
 
+// Spielplan Liga (automatisch von ligaportal.at per IMPORTHTML im Tabellenblatt, nur Ligaspiele inkl. Ergebnisse).
+// Pokal-/Freundschaftsspiele und die "Live"-Markierung kommen weiterhin aus dem Spielplan-Blatt oben.
+const SPIELPLAN_LIGA_CSV_URL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vR9RHyz2B02ITUrOQtYAilxHe7TUAomMX6V1r9AxyiNWs11-WEObnlZxxjXM72aT1Hxd-98jpk3fe9j/pub?gid=1263480886&single=true&output=csv";
+
 // Tabelle: URL eines vierten Tabellenblatts (Inhalt einfach von ligaportal.at kopiert & eingefügt).
 const TABELLE_CSV_URL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vR9RHyz2B02ITUrOQtYAilxHe7TUAomMX6V1r9AxyiNWs11-WEObnlZxxjXM72aT1Hxd-98jpk3fe9j/pub?gid=1763455887&single=true&output=csv";
 
@@ -654,32 +658,92 @@ function renderMatchesLoading(){
   document.getElementById("spielplan-container").innerHTML = "";
 }
 
+// Einfacher CSV-Parser (Anführungszeichen, Kommas in Zellen)
+function parseCSVRows(text){
+  text = text.replace(/^\uFEFF/, "");
+  const rows=[]; let row=[], cell="", q=false;
+  for(let i=0;i<text.length;i++){
+    const c=text[i];
+    if(q){ if(c==='"'){ if(text[i+1]==='"'){cell+='"';i++;} else q=false; } else cell+=c; }
+    else if(c==='"') q=true;
+    else if(c===","){ row.push(cell); cell=""; }
+    else if(c==="\n"){ row.push(cell); rows.push(row); row=[]; cell=""; }
+    else if(c!=="\r") cell+=c;
+  }
+  if(cell!==""||row.length){ row.push(cell); rows.push(row); }
+  return rows;
+}
+
+// Ligaportal-Spielplan: je Spiel zwei Zeilen
+//   Zeile 1: Datum | | Runde N
+//   Zeile 2: | Heim | Uhrzeit oder "* 3:1 * (1:0)" | Gast | Link
+function parseLigaFeed(text){
+  const rows = parseCSVRows(text);
+  const out = [];
+  for(let i=0;i<rows.length-1;i++){
+    const r = rows[i];
+    const dm = r.map(c=>String(c).match(/(\d{1,2})\.(\d{1,2})\.(\d{4})/)).find(m=>m);
+    const rc = r.findIndex(c=>/runde\s*\d+/i.test(c));
+    if(!dm || rc<1) continue;
+    const m = rows[i+1];
+    const homeRaw=(m[rc-1]||"").trim(), mid=(m[rc]||"").trim(), awayRaw=(m[rc+1]||"").trim();
+    if(!homeRaw || !awayRaw) continue;
+    const isHome = /ruprecht/i.test(homeRaw);
+    const oppRaw = isHome ? awayRaw : homeRaw;
+    let time="", result="";
+    const tm = mid.match(/^(\d{1,2}):(\d{2})(?::\d{2})?$/);
+    const sm = mid.match(/(\d+)\s*:\s*(\d+)/);
+    if(tm && !/[*(]/.test(mid)) time = tm[1].padStart(2,"0")+":"+tm[2];
+    else if(sm) result = parseInt(sm[1],10)+":"+parseInt(sm[2],10);
+    out.push({
+      date: dm[3]+"-"+dm[2].padStart(2,"0")+"-"+dm[1].padStart(2,"0"),
+      time, home:isHome, opp:cleanTeamName(oppRaw), comp:"Meisterschaftsspiel", result, live:false,
+    });
+    i++;
+  }
+  return out;
+}
+
 function loadMatches(){
   renderMatchesLoading();
 
-  function useFallback(reason){
-    console.log("[Spielplan] "+reason+" - verwende feste Liste.");
-    computeDerived(FIXTURES_FALLBACK);
+  function finish(fixtures){
+    computeDerived(fixtures);
     renderTicket();
     renderSpielplan();
     loadLineup();
     renderLiveSection();
   }
+  function useFallback(reason){
+    console.log("[Spielplan] "+reason+" - verwende feste Liste.");
+    finish(FIXTURES_FALLBACK);
+  }
 
-  if(!SPIELPLAN_CSV_URL){ useFallback("Kein SPIELPLAN_CSV_URL gesetzt"); return; }
+  const getText = url => url
+    ? fetch(url, {cache:"no-store"}).then(r => { if(!r.ok) throw new Error("HTTP-Status "+r.status); return r.text(); })
+    : Promise.reject(new Error("keine URL"));
 
-  fetch(SPIELPLAN_CSV_URL, {cache:"no-store"})
-    .then(r => { if(!r.ok) throw new Error("HTTP-Status "+r.status); return r.text(); })
-    .then(text => {
-      const fixtures = parseFixturesCSV(text);
-      if(fixtures.length === 0){ useFallback("Tabelle leer oder Spalten nicht erkannt"); return; }
-      computeDerived(fixtures);
-      renderTicket();
-      renderSpielplan();
-      loadLineup();
-      renderLiveSection();
-    })
-    .catch(err => useFallback("Fehler beim Laden der Tabelle ("+err+")"));
+  Promise.allSettled([getText(SPIELPLAN_LIGA_CSV_URL), getText(SPIELPLAN_CSV_URL)]).then(([ligaRes, ownRes])=>{
+    let own = [];
+    if(ownRes.status==="fulfilled"){ try{ own = parseFixturesCSV(ownRes.value); }catch(e){ console.error(e); } }
+    let liga = [];
+    if(ligaRes.status==="fulfilled"){ try{ liga = parseLigaFeed(ligaRes.value); }catch(e){ console.error(e); } }
+
+    if(liga.length > 0){
+      const ownByDate = {}; own.forEach(f=>{ ownByDate[f.date]=f; });
+      const merged = liga.map(f=>{
+        const o = ownByDate[f.date];
+        return {...f, time: f.time || (o && o.time) || "15:00", live: !!(o && o.live)};
+      });
+      const ligaDates = new Set(liga.map(f=>f.date));
+      // Pokal-/Freundschaftsspiele aus dem eigenen Blatt beibehalten
+      own.filter(f => f.comp && !/meister|liga/i.test(f.comp) && !ligaDates.has(f.date)).forEach(f=>merged.push(f));
+      finish(merged);
+      return;
+    }
+    if(own.length > 0){ finish(own); return; }
+    useFallback("Weder Liga-Feed noch Spielplan-Blatt nutzbar");
+  });
 }
 
 function updateCountdown(){
