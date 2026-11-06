@@ -1065,6 +1065,8 @@ function cleanTeamName(name){
   return dedupeTeamName(fixTeamName(name));
 }
 
+// Google Sheets macht aus "45:19" eine Uhrzeit und exportiert "45:19:00" - zurück in "45:19" umwandeln
+function fixTore(v){ const m=String(v||"").trim().match(/^(\d+):(\d+)(?::\d+)?$/); return m ? (parseInt(m[1],10)+":"+parseInt(m[2],10)) : v; }
 function parseTabelleCSV(text){
   text = text.replace(/^\uFEFF/, "");
   const lines = text.trim().split(/\r?\n/);
@@ -1088,7 +1090,7 @@ function parseTabelleCSV(text){
     const get = i => (i>=0 && cells[i]!==undefined) ? cells[i] : "";
     return {
       team: cleanTeamName(get(col.team)), sp: get(col.sp), s: get(col.s), u: get(col.u), n: get(col.n),
-      tore: get(col.tore), diff: get(col.diff), pkt: get(col.pkt),
+      tore: fixTore(get(col.tore)), diff: get(col.diff), pkt: get(col.pkt),
     };
   }).filter(r => r.team);
 }
